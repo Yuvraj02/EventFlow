@@ -5,7 +5,6 @@ import (
 	"eventflow/internal/models"
 	"eventflow/internal/queue"
 	"eventflow/internal/storage"
-	"eventflow/internal/workers"
 	"fmt"
 	"net/http"
 )
@@ -75,9 +74,10 @@ func PaymentRequest(w http.ResponseWriter, r *http.Request){
 	select {
 		case queue.EventBuffer <- paymentRequest:
 			w.WriteHeader(http.StatusAccepted)
-			go workers.PaymentWorker()
+		case <- ctx.Done():
+			return 
 		default:
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusTooManyRequests)
 	}
 }
 
