@@ -2,6 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"eventflow/internal/models"
+	"eventflow/internal/queue"
+	"eventflow/internal/storage"
+	"eventflow/internal/workers"
 	"fmt"
 	"net/http"
 )
@@ -26,6 +30,7 @@ func BasicGetReq(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+
 func HelloWorld(w http.ResponseWriter, r *http.Request){
 
 	ctx := r.Context()
@@ -49,3 +54,53 @@ func HelloWorld(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+func RegisterUser(w http.ResponseWriter, r *http.Request){
+
+	ctx := r.Context()
+	_ = ctx
+
+	//Recieve Event	
+	//TODO : Implement This later
+
+}
+
+func PaymentRequest(w http.ResponseWriter, r *http.Request){
+	ctx := r.Context()
+	_ = ctx
+
+	//Event to be recieve
+	var paymentRequest models.PaymentRequest
+	json.NewDecoder(r.Body).Decode(&paymentRequest)
+
+	select {
+		case queue.EventBuffer <- paymentRequest:
+			w.WriteHeader(http.StatusAccepted)
+			go workers.PaymentWorker()
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func GetPaymentData(w http.ResponseWriter, r *http.Request){
+
+	ctx := r.Context()
+	_ = ctx
+
+	var paymentData []models.PaymentData
+	
+	for _,val := range storage.PaymentData {
+		paymentData = append(paymentData, val)
+	}
+
+	response := struct{
+		Status string `json:"status"`
+		Data []models.PaymentData `json:"data"`
+	}{
+		Status: "success",
+		Data: paymentData,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
